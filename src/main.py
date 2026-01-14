@@ -5,7 +5,7 @@ import betterlogging as bl
 from aiogram import Bot, Dispatcher
 from aiogram.client.telegram import TelegramAPIServer
 from aiogram.client.session.aiohttp import AiohttpSession
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.redis import RedisStorage
 from aiohttp import web
 from redis.asyncio import Redis
 
@@ -83,7 +83,9 @@ async def run_bot():
         logger.info("Local Bot API enabled - file size limit increased to 2GB")
     else:
         bot = Bot(token=config.BOT_TOKEN.get_secret_value())
-    dp = Dispatcher(storage=MemoryStorage())
+    redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+    storage = RedisStorage.from_url(redis_url)
+    dp = Dispatcher(storage=storage)
     
     # Initialize scheduler and notifications
     scheduler = get_scheduler()
