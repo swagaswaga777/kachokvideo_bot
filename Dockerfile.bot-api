@@ -1,0 +1,50 @@
+# Telegram Bot API Server
+# Based on official telegram-bot-api build
+
+FROM ubuntu:22.04 AS builder
+
+RUN apt-get update && apt-get install -y \
+    git \
+    make \
+    zlib1g-dev \
+    libssl-dev \
+    gperf \
+    cmake \
+    clang-14 \
+    libc++-dev \
+    libc++abi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Clone and build telegram-bot-api
+RUN git clone --recursive https://github.com/tdlib/telegram-bot-api.git && \
+    cd telegram-bot-api && \
+    mkdir build && \
+    cd build && \
+    CXXFLAGS="-stdlib=libc++" CC=/usr/bin/clang-14 CXX=/usr/bin/clang++-14 \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=/usr/local .. && \
+    cmake --build . --target install -j $(nproc)
+
+# Runtime image
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    zlib1g \
+    libc++1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/bin/telegram-bot-api /usr/local/bin/
+
+RUN useradd -m -u 1000 telegram
+
+WORKDIR /var/lib/telegram-bot-api
+RUN chown telegram:telegram /var/lib/telegram-bot-api
+
+USER telegram
+
+EXPOSE 8081
+
+# Environment variables: TELEGRAM_API_ID, TELEGRAM_API_HASH
+ENTRYPOINT ["telegram-bot-api", "--local", "--http-port=8081", "--dir=/var/lib/telegram-bot-api"]

@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Telegram Bot API Server (for 2GB file uploads)
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:latest
+    container_name: telegram_bot_api
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
+      TELEGRAM_LOCAL: "true"
+    volumes:
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+    ports:
+      - "8081:8081"
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8081/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build: .
+    container_name: downloader_bot
+    env_file:
+      - .env
+    environment:
+      USE_LOCAL_BOT_API: "true"
+      LOCAL_BOT_API_URL: "http://telegram-bot-api:8081"
+    volumes:
+      - ./cookies.txt:/app/cookies.txt
+      - ./downloads:/app/downloads
+      - ./src:/app/src
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+    depends_on:
+      telegram-bot-api:
+        condition: service_healthy
+    restart: always
+
+  redis:
+    image: redis:alpine
+    container_name: bot_redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+volumes:
+  telegram-bot-api-data:

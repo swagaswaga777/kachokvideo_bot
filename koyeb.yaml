@@ -1,0 +1,80 @@
+name: telegram-bot
+
+services:
+  # Telegram Bot API Server (for 2GB file uploads)
+  - name: telegram-bot-api
+    type: web
+    docker:
+      dockerfile: Dockerfile.bot-api
+    instance_types:
+      - type: small
+        memory: "1Gi"
+    regions:
+      - fra
+    ports:
+      - port: 8081
+        protocol: http
+    env:
+      - key: TELEGRAM_API_ID
+        value: ""
+        secret: true
+      - key: TELEGRAM_API_HASH
+        value: ""
+        secret: true
+      - key: TELEGRAM_LOCAL
+        value: "true"
+    health_checks:
+      - path: /
+        protocol: http
+        port: 8081
+
+  # Main Bot Service
+  - name: bot
+    type: web
+    git:
+      repository: github.com/your-repo/bot
+      branch: main
+    build_command: pip install -r requirements.txt
+    run_command: python -m src.main
+    instance_types:
+      - type: nano
+        memory: "512Mi"
+    regions:
+      - fra
+    ports:
+      - port: 8000
+        protocol: http
+    health_checks:
+      - path: /health
+        protocol: http
+        port: 8000
+    env:
+      - key: BOT_TOKEN
+        value: ""
+        secret: true
+      - key: DATABASE_URL
+        value: "sqlite+aiosqlite:///bot.db"
+      - key: REDIS_URL
+        value: ""
+      - key: ADMIN_IDS
+        value: ""
+      - key: USE_LOCAL_BOT_API
+        value: "true"
+      - key: LOCAL_BOT_API_URL
+        value: "https://telegram-bot-api-YOUR_APP.koyeb.app"
+      - key: TELEGRAM_API_ID
+        value: ""
+        secret: true
+      - key: TELEGRAM_API_HASH
+        value: ""
+        secret: true
+      - key: LOW_MEMORY_MODE
+        value: "True"
+      - key: DOWNLOAD_WORKERS
+        value: "1"
+      - key: DOWNLOAD_SEMAPHORE
+        value: "1"
+      - key: MAX_VIDEO_SIZE_MB
+        value: "2000"
+      - key: AUTO_CLEANUP
+        value: "True"
