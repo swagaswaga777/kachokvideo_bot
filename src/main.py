@@ -83,7 +83,7 @@ async def run_bot():
         logger.info("Local Bot API enabled - file size limit increased to 2GB")
     else:
         bot = Bot(token=config.BOT_TOKEN.get_secret_value())
-    redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+    redis_url = config.REDIS_URL
     storage = RedisStorage.from_url(redis_url)
     dp = Dispatcher(storage=storage)
     

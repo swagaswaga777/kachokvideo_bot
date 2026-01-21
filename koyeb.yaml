@@ -1,14 +1,71 @@
 name: telegram-bot
 
 services:
-  # Telegram Bot API Server (for 2GB file uploads)
+  # Redis Service (required for FSM and Throttling)
+  - name: redis
+    type: worker
+    image: redis:alpine
+    instance_types:
+      - type: nano
+    regions:
+      - fra
+    ports:
+      - port: 6379
+        protocol: tcp
+
+  # Main Bot Service
+  - name: bot
+    type: worker
+    git:
+      repository: github.com/swagaswaga777/kachokvideo_bot
+      branch: main
+    docker:
+      dockerfile: Dockerfile
+    instance_types:
+      - type: nano
+    regions:
+      - fra
+    env:
+      - key: BOT_TOKEN
+        value: "" # Set this in Koyeb Dashboard
+      - key: DATABASE_URL
+        value: "sqlite+aiosqlite:///bot.db"
+      - key: REDIS_URL
+        value: "redis://redis:6379/0" # Points to the internal redis service
+      - key: ADMIN_IDS
+        value: ""
+      # Local Bot API settings (Optional)
+      - key: USE_LOCAL_BOT_API
+        value: "true"
+      - key: LOCAL_BOT_API_URL
+        value: "http://telegram-bot-api:8081"
+      - key: TELEGRAM_API_ID
+        value: ""
+        secret: true
+      - key: TELEGRAM_API_HASH
+        value: ""
+        secret: true
+      - key: LOW_MEMORY_MODE
+        value: "True"
+      - key: DOWNLOAD_WORKERS
+        value: "1"
+      - key: MAX_VIDEO_SIZE_MB
+        value: "2000"
+      - key: AUTO_CLEANUP
+        value: "True"
+    depends_on:
+      - redis
+
+  # Telegram Bot API Server
   - name: telegram-bot-api
     type: web
+    git:
+      repository: github.com/swagaswaga777/kachokvideo_bot
+      branch: main
     docker:
       dockerfile: Dockerfile.bot-api
     instance_types:
       - type: small
-        memory: "1Gi"
     regions:
       - fra
     ports:
@@ -27,54 +84,3 @@ services:
       - path: /
         protocol: http
         port: 8081
-
-  # Main Bot Service
-  - name: bot
-    type: web
-    git:
-      repository: github.com/your-repo/bot
-      branch: main
-    build_command: pip install -r requirements.txt
-    run_command: python -m src.main
-    instance_types:
-      - type: nano
-        memory: "512Mi"
-    regions:
-      - fra
-    ports:
-      - port: 8000
-        protocol: http
-    health_checks:
-      - path: /health
-        protocol: http
-        port: 8000
-    env:
-      - key: BOT_TOKEN
-        value: ""
-        secret: true
-      - key: DATABASE_URL
-        value: "sqlite+aiosqlite:///bot.db"
-      - key: REDIS_URL
-        value: ""
-      - key: ADMIN_IDS
-        value: ""
-      - key: USE_LOCAL_BOT_API
-        value: "true"
-      - key: LOCAL_BOT_API_URL
-        value: "https://telegram-bot-api-YOUR_APP.koyeb.app"
-      - key: TELEGRAM_API_ID
-        value: ""
-        secret: true
-      - key: TELEGRAM_API_HASH
-        value: ""
-        secret: true
-      - key: LOW_MEMORY_MODE
-        value: "True"
-      - key: DOWNLOAD_WORKERS
-        value: "1"
-      - key: DOWNLOAD_SEMAPHORE
-        value: "1"
-      - key: MAX_VIDEO_SIZE_MB
-        value: "2000"
-      - key: AUTO_CLEANUP
-        value: "True"

@@ -5,7 +5,7 @@ from typing import Optional
 class Settings(BaseSettings):
     BOT_TOKEN: SecretStr
     DATABASE_URL: str = "sqlite+aiosqlite:///bot.db"
-    REDIS_URL: str = "redis://redis:6379/0"
+    REDIS_URL: str = "redis://localhost:6379/0"
     REQUIRED_CHANNEL_ID: int = 0
     ADMIN_IDS: str = "" # Comma separated list of IDs
     WALLET_PAY_API_KEY: str = ""  # Wallet Pay Store API Key
